@@ -177,7 +177,7 @@ def _load_injuries() -> dict:
         return json.load(f)
 
 
-def strength_offset(team: str, injuries: dict | None = None) -> tuple[float, float]:
+def strength_offset(team: str, injuries=None):
     """
     Returns (attack_offset, defence_offset) as log-scale values to add to xG params.
 

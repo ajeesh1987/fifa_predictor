@@ -85,7 +85,7 @@ def _neg_log_likelihood(params, teams, home_idx, away_idx, home_goals, away_goal
     return -ll
 
 
-def train(df: pd.DataFrame, known_teams: list[str], wc_matches: pd.DataFrame | None = None):
+def train(df: pd.DataFrame, known_teams: list, wc_matches=None):
     """
     Train on historical results + optional WC actuals (surprise-weighted).
     Applies 18-month window + competition weights.
@@ -140,18 +140,18 @@ def train(df: pd.DataFrame, known_teams: list[str], wc_matches: pd.DataFrame | N
         except Exception:
             pass
 
-    constraints = [{"type": "eq", "fun": lambda p: np.sum(p[:n])}]
     print(f"Training on {len(df)} matches for {n} teams...")
 
     result = minimize(
         _neg_log_likelihood, x0,
         args=(teams, home_idx, away_idx, home_goals, away_goals, weights),
         method="L-BFGS-B",
-        constraints=constraints,
-        options={"maxiter": 500, "ftol": 1e-9},
+        options={"maxiter": 300, "ftol": 1e-7},
     )
 
     params = result.x
+    # Normalise: enforce sum(attack) = 0 manually
+    params[:n] -= params[:n].mean()
     model = {
         "teams": teams,
         "attack": dict(zip(teams, params[:n])),

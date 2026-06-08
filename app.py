@@ -66,8 +66,9 @@ ALL_TEAMS = sorted(FIFA_RANKINGS.keys())
 if page == "Today's Matches":
     st.title("Today's Matches")
     from datetime import date as _date
-    selected_date = st.date_input("Select date", value=_today_cest(),
-                                   min_value=_date(2026, 6, 11), max_value=_date(2026, 7, 19))
+    _min, _max = _date(2026, 6, 11), _date(2026, 7, 19)
+    _default = max(_min, min(_today_cest(), _max))
+    selected_date = st.date_input("Select date", value=_default, min_value=_min, max_value=_max)
 
     day_fixtures = [f for f in GROUP_FIXTURES if f["date"] == selected_date]
 

@@ -59,7 +59,8 @@ def save_prediction(fixture: dict, pred: dict):
         df = df[~mask]
 
     df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
-    df.sort_values(["date", "home_team"], inplace=True)
+    df["date"] = pd.to_datetime(df["date"]).dt.date
+    df.sort_values(["date", "home_team"], key=lambda col: col.astype(str), inplace=True)
     df.to_csv(STORE_PATH, index=False)
 
 
