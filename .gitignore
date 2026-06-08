@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pkl
+*.pyc
+data/results.csv
+data/elo_ratings.csv
+data/prediction_log.csv
+data/injuries.json
+data/.last_score_fetch
+data/.last_injury_fetch
+.DS_Store
