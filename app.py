@@ -197,7 +197,7 @@ elif page == "Results & Accuracy":
                 st.write(f"• {msg}")
 
     # Manual re-fetch button
-    col_fetch, col_retrain = st.columns([1, 1])
+    col_fetch, col_retrain, col_force = st.columns([1, 1, 1])
     if col_fetch.button("Re-fetch scores now"):
         updated, msgs = fetch_and_update_actuals(force=True)
         st.session_state["fetch_msgs"] = msgs
@@ -214,6 +214,21 @@ elif page == "Results & Accuracy":
             msg = retrain_with_wc_results()
         st.success(msg)
         st.cache_resource.clear()
+
+    if col_force.button("Force full retrain", help="Re-fetches all historical data from ESPN then retrains. Use after a matchday."):
+        from data.fetch_data import fetch_results, FIFA_RANKINGS
+        from data.elo import build_elo, save_elo
+        from data.fetch_scores import retrain_with_wc_results
+        from model.dixon_coles import train
+        with st.spinner("Fetching fresh data from ESPN and retraining…"):
+            df = fetch_results(force=True)
+            ratings = build_elo(df)
+            save_elo(ratings)
+            train(df, list(FIFA_RANKINGS.keys()))
+            wc_msg = retrain_with_wc_results()
+        st.success(f"Full retrain complete on {len(df)} matches. {wc_msg}")
+        st.cache_resource.clear()
+        st.rerun()
 
     st.divider()
 
