@@ -1,10 +1,11 @@
 """
 Dixon-Coles Poisson model — enhanced:
-  - 18-month training window (xi=0.003)
+  - 18-month training window (xi=0.003) + 3-month recency boost (1.5×)
   - Competition weights (WC/majors 3×, qualifiers 1.5×, friendlies 0.5×)
   - Elo delta as feature (attack offset)
-  - Squad strength + injury offset
-  - Draw probability calibration (inflate 0-0, 1-1)
+  - Squad strength + injury offset (attack and defence separately)
+  - Learned rho parameter handles draw calibration (no hard-coded heuristic)
+  - Head-to-head history offset
   - Warm-start from previous model
   - Separate home_adv for group stage vs neutral (knockout)
 """
@@ -99,7 +100,10 @@ def train(df: pd.DataFrame, known_teams: list, wc_matches=None):
     df = df[df["date"] >= cutoff]
     df["time_w"] = df["date"].apply(lambda d: _time_weight(d, today))
     df["comp_w"] = df.get("tournament", pd.Series("", index=df.index)).apply(_comp_weight)
-    df["weight"] = df["time_w"] * df["comp_w"]
+    # Extra recency boost for matches in the last 90 days (form going into tournament)
+    recent_cutoff = today - timedelta(days=90)
+    df["recency_boost"] = df["date"].apply(lambda d: 1.5 if d >= recent_cutoff else 1.0)
+    df["weight"] = df["time_w"] * df["comp_w"] * df["recency_boost"]
     df = df[df["weight"] > MIN_WEIGHT]
 
     if wc_matches is not None and not wc_matches.empty:
@@ -179,28 +183,11 @@ def _get_team_params(model, team):
     return scale * 0.3, -scale * 0.3
 
 
-def _draw_calibration(matrix: np.ndarray, inflate: float = 0.04) -> np.ndarray:
-    """
-    Redistribute `inflate` fraction of probability from 1-0/0-1 into 0-0/1-1.
-    Corrects Poisson's systematic under-prediction of draws in international football.
-    """
-    m = matrix.copy()
-    # Take from 1-0 and 0-1
-    transfer = min(inflate / 2, m[1, 0] * 0.3, m[0, 1] * 0.3)
-    m[1, 0] -= transfer
-    m[0, 1] -= transfer
-    # Give to 0-0 and 1-1
-    m[0, 0] += transfer
-    m[1, 1] += transfer
-    m = np.clip(m, 0, None)
-    m /= m.sum()
-    return m
-
-
 def predict_score_matrix(model, home_team, away_team, neutral=False, max_goals=10,
                           elo_ratings=None, injuries=None):
     from data.squad_strength import strength_offset
     from data.elo import get_elo_delta, BASE_ELO
+    from data.h2h import get_h2h_offset
 
     att_h, def_h = _get_team_params(model, home_team)
     att_a, def_a = _get_team_params(model, away_team)
@@ -209,17 +196,21 @@ def predict_score_matrix(model, home_team, away_team, neutral=False, max_goals=1
     elo_offset = 0.0
     if elo_ratings:
         delta = get_elo_delta(home_team, away_team, elo_ratings)
-        elo_offset = delta * 0.05  # tuned scale
+        elo_offset = delta * 0.05
 
-    # Squad / injury offset
+    # Squad / injury offset (atk offset raises/lowers expected goals; def offset raises/lowers goals conceded)
     sq_atk_h, sq_def_h = strength_offset(home_team, injuries)
     sq_atk_a, sq_def_a = strength_offset(away_team, injuries)
+
+    # H2H offset: +ve means home team historically outperforms vs this opponent
+    h2h_offset = get_h2h_offset(home_team, away_team)
 
     home_adv = 0.0 if neutral else model["home_adv"]
     rho = model["rho"]
 
-    lam = np.exp(att_h + sq_atk_h + def_a + sq_def_a + home_adv + elo_offset)
-    mu  = np.exp(att_a + sq_atk_a + def_h + sq_def_h - elo_offset)
+    # def offset: better defence = lower goals conceded by opponent, so subtract from opponent's lambda
+    lam = np.exp(att_h + sq_atk_h - sq_def_a + home_adv + elo_offset + h2h_offset)
+    mu  = np.exp(att_a + sq_atk_a - sq_def_h - elo_offset - h2h_offset)
 
     matrix = np.zeros((max_goals + 1, max_goals + 1))
     for i in range(max_goals + 1):
@@ -228,7 +219,6 @@ def predict_score_matrix(model, home_team, away_team, neutral=False, max_goals=1
             matrix[i][j] = t * poisson.pmf(i, lam) * poisson.pmf(j, mu)
 
     matrix /= matrix.sum()
-    matrix = _draw_calibration(matrix)
     return lam, mu, matrix
 
 

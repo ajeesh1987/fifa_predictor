@@ -197,14 +197,23 @@ elif page == "Results & Accuracy":
                 st.write(f"• {msg}")
 
     # Manual re-fetch button
-    if st.button("Re-fetch scores now"):
+    col_fetch, col_retrain = st.columns([1, 1])
+    if col_fetch.button("Re-fetch scores now"):
         updated, msgs = fetch_and_update_actuals(force=True)
         st.session_state["fetch_msgs"] = msgs
         if updated:
-            st.success(f"Updated {updated} result(s).")
+            st.success(f"Updated {updated} result(s). Model retrained.")
+            st.cache_resource.clear()
             st.rerun()
         else:
             st.info(msgs[0] if msgs else "No new results found.")
+
+    if col_retrain.button("Retrain model on WC results"):
+        from data.fetch_scores import retrain_with_wc_results
+        with st.spinner("Retraining…"):
+            msg = retrain_with_wc_results()
+        st.success(msg)
+        st.cache_resource.clear()
 
     st.divider()
 

@@ -4,6 +4,7 @@ import os
 import json
 import time
 import requests
+import pandas as pd
 import pytz
 from datetime import datetime, timedelta
 
@@ -175,10 +176,17 @@ def retrain_with_wc_results() -> str:
     known_teams = list(FIFA_RANKINGS.keys())
 
     from data.elo import build_elo, save_elo
-    ratings = build_elo(hist)
+    # Append WC actuals so Elo reflects tournament performance, not just pre-tournament form
+    wc_for_elo = wc_matches[["date", "home_team", "away_team", "home_score", "away_score"]].copy()
+    wc_for_elo["tournament"] = "FIFA World Cup"
+    hist_with_wc = pd.concat([hist, wc_for_elo], ignore_index=True)
+    ratings = build_elo(hist_with_wc)
     save_elo(ratings)
 
     train(hist, known_teams, wc_matches=wc_matches)
+
+    from data.h2h import clear_cache
+    clear_cache()
 
     n_surprise = (scored["surprise_weight"] > 1.5).sum()
     return f"Model retrained on {len(wc_matches)} WC match(es) ({n_surprise} surprise(s) boosted)."
