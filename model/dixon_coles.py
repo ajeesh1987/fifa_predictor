@@ -208,8 +208,15 @@ def predict_score_matrix(model, home_team, away_team, neutral=False, max_goals=1
     home_adv = 0.0 if neutral else model["home_adv"]
     rho = model["rho"]
 
+    # Host-nation boost: WC 2026 co-hosts get extra crowd/familiarity advantage beyond
+    # the generic home_adv already in the model (calibrated so Mexico beats South Africa
+    # but USA vs Portugal stays in USA's favour without being a blowout).
+    HOST_NATIONS = {"USA", "Mexico", "Canada"}
+    HOST_BOOST = 0.15  # log-scale on lam; ~+16% xG for the host
+    host_boost = HOST_BOOST if (not neutral and home_team in HOST_NATIONS) else 0.0
+
     # def offset: better defence = lower goals conceded by opponent, so subtract from opponent's lambda
-    lam = np.exp(att_h + sq_atk_h - sq_def_a + home_adv + elo_offset + h2h_offset)
+    lam = np.exp(att_h + sq_atk_h - sq_def_a + home_adv + elo_offset + h2h_offset + host_boost)
     mu  = np.exp(att_a + sq_atk_a - sq_def_h - elo_offset - h2h_offset)
 
     matrix = np.zeros((max_goals + 1, max_goals + 1))
