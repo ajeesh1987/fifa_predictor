@@ -131,20 +131,25 @@ def train(df: pd.DataFrame, known_teams: list, wc_matches=None):
     away_goals = df["away_score"].values.astype(int)
     weights = df["weight"].values
 
-    # Warm-start
+    # Warm-start — only reuse previous params if they look sane (|att| < 3)
     x0 = np.zeros(2 * n + 2)
     x0[2*n] = 0.3
     x0[2*n + 1] = -0.1
     if os.path.exists(MODEL_PATH):
         try:
             prev = load_model()
-            for i, t in enumerate(teams):
-                x0[i] = prev["attack"].get(t, 0.0)
-                x0[n + i] = prev["defence"].get(t, 0.0)
-            x0[2*n] = prev.get("home_adv", 0.3)
-            x0[2*n + 1] = prev.get("rho", -0.1)
+            att_vals = list(prev["attack"].values())
+            if att_vals and max(abs(v) for v in att_vals) < 3.0:
+                for i, t in enumerate(teams):
+                    x0[i] = prev["attack"].get(t, 0.0)
+                    x0[n + i] = prev["defence"].get(t, 0.0)
+                x0[2*n] = prev.get("home_adv", 0.3)
+                x0[2*n + 1] = prev.get("rho", -0.1)
         except Exception:
             pass
+
+    # Bounds: keep attack/defence in [-3, 3], home_adv in [0, 1], rho in [-0.5, 0.5]
+    bounds = [(-3.0, 3.0)] * (2 * n) + [(0.0, 1.0), (-0.5, 0.5)]
 
     print(f"Training on {len(df)} matches for {n} teams...")
 
@@ -152,6 +157,7 @@ def train(df: pd.DataFrame, known_teams: list, wc_matches=None):
         _neg_log_likelihood, x0,
         args=(teams, home_idx, away_idx, home_goals, away_goals, weights),
         method="L-BFGS-B",
+        bounds=bounds,
         options={"maxiter": 300, "ftol": 1e-7},
     )
 
