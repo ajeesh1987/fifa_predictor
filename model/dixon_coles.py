@@ -231,9 +231,21 @@ def predict_match(model, home_team, away_team, neutral=False, elo_ratings=None, 
     draw     = float(np.sum(np.diag(matrix)))
     away_win = float(np.sum(np.triu(matrix, 1)))
 
-    idx = np.unravel_index(np.argmax(matrix), matrix.shape)
     flat = [(matrix[i][j], i, j) for i in range(11) for j in range(11)]
     top_scores = sorted(flat, reverse=True)[:5]
+
+    # Pick the most likely score from the most probable outcome region,
+    # so Brazil at 60% win doesn't show 1-1 just because that single cell
+    # edges out 2-0 by a fraction.
+    dominant = max(home_win, draw, away_win)
+    if dominant == home_win:
+        candidates = [(matrix[i][j], i, j) for i in range(11) for j in range(11) if i > j]
+    elif dominant == away_win:
+        candidates = [(matrix[i][j], i, j) for i in range(11) for j in range(11) if j > i]
+    else:
+        candidates = [(matrix[i][j], i, j) for i in range(11) for j in range(11) if i == j]
+    best = max(candidates, key=lambda x: x[0])
+    idx = (best[1], best[2])
 
     return {
         "home_team": home_team,
