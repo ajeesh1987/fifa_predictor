@@ -69,6 +69,7 @@ def build_elo(df: pd.DataFrame) -> dict[str, float]:
     df = df.sort_values("date")
 
     ratings: dict[str, float] = dict(FIFA_RANKINGS)
+    df = df.dropna(subset=["home_score", "away_score"])
 
     for _, row in df.iterrows():
         h, a = row["home_team"], row["away_team"]
