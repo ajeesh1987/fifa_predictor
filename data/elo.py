@@ -60,12 +60,15 @@ def build_elo(df: pd.DataFrame) -> dict[str, float]:
     """
     Iterate chronologically through all matches, update Elo.
     Returns final dict: team → elo_rating.
+    Seeded from FIFA_RANKINGS so synthetic/sparse data can't invert
+    well-known team strength (e.g. Portugal >> USA).
     """
+    from data.fetch_data import FIFA_RANKINGS
     df = df.copy()
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date")
 
-    ratings: dict[str, float] = {}
+    ratings: dict[str, float] = dict(FIFA_RANKINGS)
 
     for _, row in df.iterrows():
         h, a = row["home_team"], row["away_team"]

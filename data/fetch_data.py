@@ -1,10 +1,8 @@
-"""Fetch historical international results via ESPN API + fallback synthetic data."""
+"""Fetch historical international results from martj42/international_results."""
 
 import os
-import time
 import requests
 import pandas as pd
-import numpy as np
 from datetime import date, timedelta
 from io import StringIO
 
@@ -48,93 +46,28 @@ ESPN_TEAM_IDS = {
     "Switzerland": "36", "Denmark": "16",
 }
 
-ESPN_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard"
-
-
-def _fetch_espn_range(start: date, end: date) -> list[dict]:
-    """Fetch completed international matches from ESPN between two dates."""
-    results = []
-    current = start
-    while current <= end:
-        date_str = current.strftime("%Y%m%d")
-        try:
-            r = requests.get(ESPN_SCOREBOARD, params={"dates": date_str}, timeout=10)
-            r.raise_for_status()
-            for event in r.json().get("events", []):
-                comp = event.get("competitions", [{}])[0]
-                status = comp.get("status", {}).get("type", {}).get("name", "")
-                if status != "STATUS_FINAL":
-                    continue
-                competitors = comp.get("competitors", [])
-                if len(competitors) < 2:
-                    continue
-                home = next((c for c in competitors if c.get("homeAway") == "home"), None)
-                away = next((c for c in competitors if c.get("homeAway") == "away"), None)
-                if home and away:
-                    results.append({
-                        "date": current,
-                        "home_team": home["team"]["displayName"],
-                        "away_team": away["team"]["displayName"],
-                        "home_score": int(home.get("score", 0)),
-                        "away_score": int(away.get("score", 0)),
-                        "tournament": event.get("season", {}).get("type", {}).get("name", "Friendly"),
-                        "neutral": False,
-                    })
-        except Exception:
-            pass
-        current += timedelta(days=1)
-        time.sleep(0.05)
-    return results
-
-
-def _build_synthetic() -> pd.DataFrame:
-    """
-    Ranking-based synthetic data for 18 months.
-    Used when no internet access or ESPN returns nothing useful.
-    Generates ~2000 plausible matches so the optimizer has data to work with.
-    """
-    np.random.seed(42)
-    teams = list(FIFA_RANKINGS.keys())
-    rows = []
-    today = date.today()
-    # Generate across last 18 months so time-decay filter keeps them
-    for i in range(800):
-        h, a = np.random.choice(len(teams), 2, replace=False)
-        ht, at = teams[h], teams[a]
-        rh, ra = FIFA_RANKINGS[ht], FIFA_RANKINGS[at]
-        lam_h = max(0.3, 1.2 + (rh - ra) / 2500)
-        lam_a = max(0.3, 1.0 + (ra - rh) / 2500)
-        hg = int(np.random.poisson(lam_h))
-        ag = int(np.random.poisson(lam_a))
-        days_ago = np.random.randint(1, 540)
-        d = today - timedelta(days=int(days_ago))
-        rows.append({
-            "date": d, "home_team": ht, "away_team": at,
-            "home_score": hg, "away_score": ag,
-            "tournament": "Friendly", "neutral": False,
-        })
-    print(f"Built {len(rows)} synthetic matches (18-month window).")
-    return pd.DataFrame(rows)
+MARTJ42_URL = "https://raw.githubusercontent.com/martj42/international_results/master/results.csv"
 
 
 def fetch_results(force=False) -> pd.DataFrame:
     if os.path.exists(RESULTS_CSV) and not force:
         return pd.read_csv(RESULTS_CSV, parse_dates=["date"])
 
-    today = date.today()
-    start = today - timedelta(days=548)
+    print("Downloading international results from martj42/international_results...")
+    r = requests.get(MARTJ42_URL, timeout=30)
+    r.raise_for_status()
+    df = pd.read_csv(StringIO(r.text), parse_dates=["date"])
 
-    print(f"Fetching ESPN results {start} → {today} (this may take a minute)...")
-    rows = _fetch_espn_range(start, today)
+    # Keep last 4 years — enough signal, not too slow to train
+    cutoff = pd.Timestamp(date.today()) - pd.DateOffset(years=4)
+    df = df[df["date"] >= cutoff].copy()
 
-    if len(rows) < 50:
-        print(f"ESPN returned only {len(rows)} matches — using synthetic data.")
-        df = _build_synthetic()
-    else:
-        df = pd.DataFrame(rows)
-        print(f"Fetched {len(df)} matches from ESPN.")
+    # Normalise column names to match what the rest of the app expects
+    df = df.rename(columns={"home_score": "home_score", "away_score": "away_score"})
+    df["neutral"] = df["neutral"].astype(str).str.upper() == "TRUE"
 
     df.to_csv(RESULTS_CSV, index=False)
+    print(f"Saved {len(df)} matches to {RESULTS_CSV}")
     return df
 
 

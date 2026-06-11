@@ -94,10 +94,12 @@ def train(df: pd.DataFrame, known_teams: list, wc_matches=None):
     df = df.copy()
     df["date"] = pd.to_datetime(df["date"]).dt.date
     today = date.today()
-    cutoff = today - timedelta(days=548)  # 18 months
+    cutoff = today - timedelta(days=1095)  # 36 months
 
-    df = df[df["home_team"].isin(known_teams) & df["away_team"].isin(known_teams)]
     df = df[df["date"] >= cutoff]
+    # Only matches where both teams are WC participants — keeps optimizer focused
+    wc_set = set(known_teams)
+    df = df[df["home_team"].isin(wc_set) & df["away_team"].isin(wc_set)]
     df["time_w"] = df["date"].apply(lambda d: _time_weight(d, today))
     df["comp_w"] = df.get("tournament", pd.Series("", index=df.index)).apply(_comp_weight)
     # Extra recency boost for matches in the last 90 days (form going into tournament)
