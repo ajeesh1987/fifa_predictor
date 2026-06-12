@@ -33,8 +33,10 @@ def _fetch_espn_date(date_cest: datetime) -> list[dict]:
     matches = []
     for event in data.get("events", []):
         comp = event.get("competitions", [{}])[0]
-        status = comp.get("status", {}).get("type", {}).get("name", "")
-        if status != "STATUS_FINAL":
+        status_type = comp.get("status", {}).get("type", {})
+        status = status_type.get("name", "")
+        completed = status_type.get("completed", False)
+        if not completed and status not in ("STATUS_FINAL", "STATUS_FULL_TIME"):
             continue
         competitors = comp.get("competitors", [])
         if len(competitors) < 2:
@@ -57,12 +59,20 @@ TEAM_NAME_MAP = {
     "United States": "USA",
     "South Korea": "South Korea",
     "Korea Republic": "South Korea",
+    "Czechia": "Czech Republic",
+    "Czech Rep.": "Czech Republic",
+    "Bosnia & Herzegovina": "Bosnia and Herzegovina",
+    "Ivory Coast": "Ivory Coast",
+    "Côte d'Ivoire": "Ivory Coast",
+    "DR Congo": "DR Congo",
+    "Democratic Republic of Congo": "DR Congo",
     "Iran": "Iran",
     "Saudi Arabia": "Saudi Arabia",
     "New Zealand": "New Zealand",
     "South Africa": "South Africa",
     "Costa Rica": "Costa Rica",
-    "Saudi Arabia": "Saudi Arabia",
+    "Cape Verde": "Cape Verde",
+    "Cape Verde Islands": "Cape Verde",
 }
 
 
@@ -81,7 +91,8 @@ def should_fetch() -> bool:
 
 def fetch_and_update_actuals(force=False) -> tuple[int, list[str]]:
     """
-    Fetch scores for yesterday (CEST) and update prediction log.
+    Fetch scores for the past 3 days (CEST) and update prediction log.
+    Looks back 3 days so missed results (e.g. due to status bugs) are caught.
     Returns (matches_updated, messages).
     """
     from data.predictions_store import save_actual, load_with_actuals
@@ -90,33 +101,38 @@ def fetch_and_update_actuals(force=False) -> tuple[int, list[str]]:
         return 0, []
 
     now = _now_cest()
-    yesterday = (now - timedelta(days=1)).date()
-
-    matches = _fetch_espn_date(now - timedelta(days=1))
 
     # Stamp fetch time regardless of results
     with open(LAST_FETCH_FILE, "w") as f:
         f.write(str(time.time()))
 
-    if not matches:
+    all_matches_by_date = {}
+    for days_ago in range(1, 4):
+        day = now - timedelta(days=days_ago)
+        day_matches = _fetch_espn_date(day)
+        if day_matches:
+            all_matches_by_date[day.date()] = day_matches
+
+    if not all_matches_by_date:
+        yesterday = (now - timedelta(days=1)).date()
         return 0, [f"No completed matches found for {yesterday} (CEST)."]
 
-    log = load_with_actuals()
     updated = 0
     messages = []
 
-    for m in matches:
-        home = _normalize(m["home_team"])
-        away = _normalize(m["away_team"])
-        ok = save_actual(str(yesterday), home, away, m["home_score"], m["away_score"])
-        if ok:
-            updated += 1
-            messages.append(f"{home} {m['home_score']}–{m['away_score']} {away}")
-        else:
-            ok2 = save_actual(str(yesterday), away, home, m["away_score"], m["home_score"])
-            if ok2:
+    for match_date, matches in all_matches_by_date.items():
+        for m in matches:
+            home = _normalize(m["home_team"])
+            away = _normalize(m["away_team"])
+            ok = save_actual(str(match_date), home, away, m["home_score"], m["away_score"])
+            if ok:
                 updated += 1
-                messages.append(f"{away} {m['away_score']}–{m['home_score']} {home} (flipped)")
+                messages.append(f"{home} {m['home_score']}–{m['away_score']} {away}")
+            else:
+                ok2 = save_actual(str(match_date), away, home, m["away_score"], m["home_score"])
+                if ok2:
+                    updated += 1
+                    messages.append(f"{away} {m['away_score']}–{m['home_score']} {home} (flipped)")
 
     if updated:
         retrain_msg = retrain_with_wc_results()
