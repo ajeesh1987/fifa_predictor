@@ -48,10 +48,33 @@ ESPN_TEAM_IDS = {
 
 MARTJ42_URL = "https://raw.githubusercontent.com/martj42/international_results/master/results.csv"
 
+# martj42 dataset uses different names for some WC teams — normalise to our keys
+TEAM_NAME_NORMALISE = {
+    "United States": "USA",
+    "Korea Republic": "South Korea",
+    "Czechia": "Czech Republic",
+    "Czech Rep.": "Czech Republic",
+    "Bosnia-Herzegovina": "Bosnia and Herzegovina",
+    "Bosnia & Herzegovina": "Bosnia and Herzegovina",
+    "Ivory Coast": "Ivory Coast",
+    "Côte d'Ivoire": "Ivory Coast",
+    "DR Congo": "DR Congo",
+    "Democratic Republic of the Congo": "DR Congo",
+    "Cape Verde Islands": "Cape Verde",
+    "Trinidad and Tobago": "Trinidad and Tobago",
+}
+
+
+def _normalise_teams(df: pd.DataFrame) -> pd.DataFrame:
+    df["home_team"] = df["home_team"].replace(TEAM_NAME_NORMALISE)
+    df["away_team"] = df["away_team"].replace(TEAM_NAME_NORMALISE)
+    return df
+
 
 def fetch_results(force=False) -> pd.DataFrame:
     if os.path.exists(RESULTS_CSV) and not force:
-        return pd.read_csv(RESULTS_CSV, parse_dates=["date"])
+        df = pd.read_csv(RESULTS_CSV, parse_dates=["date"])
+        return _normalise_teams(df)
 
     print("Downloading international results from martj42/international_results...")
     r = requests.get(MARTJ42_URL, timeout=30)
@@ -62,9 +85,9 @@ def fetch_results(force=False) -> pd.DataFrame:
     cutoff = pd.Timestamp(date.today()) - pd.DateOffset(years=4)
     df = df[df["date"] >= cutoff].copy()
 
-    # Normalise column names to match what the rest of the app expects
     df = df.rename(columns={"home_score": "home_score", "away_score": "away_score"})
     df["neutral"] = df["neutral"].astype(str).str.upper() == "TRUE"
+    df = _normalise_teams(df)
 
     df.to_csv(RESULTS_CSV, index=False)
     print(f"Saved {len(df)} matches to {RESULTS_CSV}")
