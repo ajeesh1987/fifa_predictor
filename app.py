@@ -177,9 +177,15 @@ elif page == "Tournament Forecast":
 
         st.subheader("Full Rankings Table")
         st.dataframe(
-            df.style.background_gradient(subset=["win_%", "final_%", "top4_%"], cmap="YlOrRd"),
+            df,
             use_container_width=True,
             height=600,
+            column_config={
+                "win_%":      st.column_config.ProgressColumn("Win %",    min_value=0, max_value=100, format="%.1f%%"),
+                "final_%":    st.column_config.ProgressColumn("Final %",  min_value=0, max_value=100, format="%.1f%%"),
+                "top4_%":     st.column_config.ProgressColumn("Top 4 %",  min_value=0, max_value=100, format="%.1f%%"),
+                "semifinal_%":st.column_config.ProgressColumn("Semi %",   min_value=0, max_value=100, format="%.1f%%"),
+            },
         )
 
 
