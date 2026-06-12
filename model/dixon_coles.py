@@ -125,6 +125,7 @@ def train(df: pd.DataFrame, known_teams: list, wc_matches=None):
     t_idx = {t: i for i, t in enumerate(teams)}
     n = len(teams)
 
+    df = df.dropna(subset=["home_score", "away_score"])
     home_idx = df["home_team"].map(t_idx).values
     away_idx = df["away_team"].map(t_idx).values
     home_goals = df["home_score"].values.astype(int)

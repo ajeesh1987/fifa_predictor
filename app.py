@@ -58,7 +58,7 @@ injuries = get_injuries()
 
 # ── Sidebar navigation ─────────────────────────────────────────────────────────
 st.sidebar.title("⚽ FIFA 2026 Predictor")
-page = st.sidebar.radio("", ["Today's Matches", "Match Predictor", "Tournament Forecast", "Results & Accuracy", "Squad & Injuries"])
+page = st.sidebar.radio("Navigation", ["Today's Matches", "Match Predictor", "Tournament Forecast", "Results & Accuracy", "Squad & Injuries"], label_visibility="collapsed")
 
 ALL_TEAMS = sorted(FIFA_RANKINGS.keys())
 
