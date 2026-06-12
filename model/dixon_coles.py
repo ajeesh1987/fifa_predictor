@@ -34,7 +34,7 @@ COMPETITION_WEIGHTS = {
     "FIFA World Cup qualification": 1.5,
     "UEFA Euro qualification": 1.5,
     "Copa América qualification": 1.4,
-    "Friendly": 0.5,
+    "Friendly": 0.3,
 }
 DEFAULT_COMP_WEIGHT = 1.0
 
@@ -102,9 +102,12 @@ def train(df: pd.DataFrame, known_teams: list, wc_matches=None):
     df = df[df["home_team"].isin(wc_set) & df["away_team"].isin(wc_set)]
     df["time_w"] = df["date"].apply(lambda d: _time_weight(d, today))
     df["comp_w"] = df.get("tournament", pd.Series("", index=df.index)).apply(_comp_weight)
-    # Extra recency boost for matches in the last 90 days (form going into tournament)
+    # Recency boost for competitive matches in last 90 days — not friendlies
+    # (pre-tournament warmup scorelines like 5-0 vs weak teams shouldn't dominate)
     recent_cutoff = today - timedelta(days=90)
-    df["recency_boost"] = df["date"].apply(lambda d: 1.5 if d >= recent_cutoff else 1.0)
+    is_recent = df["date"].apply(lambda d: d >= recent_cutoff)
+    is_friendly = df.get("tournament", pd.Series("", index=df.index)).str.lower().str.contains("friendly")
+    df["recency_boost"] = np.where(is_recent & ~is_friendly, 1.5, 1.0)
     df["weight"] = df["time_w"] * df["comp_w"] * df["recency_boost"]
     df = df[df["weight"] > MIN_WEIGHT]
 
