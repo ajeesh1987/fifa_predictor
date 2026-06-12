@@ -157,10 +157,14 @@ elif page == "Tournament Forecast":
 
     n_sims = st.slider("Simulations", 1000, 20000, 5000, 1000)
 
-    if st.button("Run Simulation", type="primary"):
-        with st.spinner("Simulating tournament..."):
+    col_run, col_clear = st.columns([2, 1])
+    if col_run.button("Run Simulation", type="primary"):
+        with st.spinner("Simulating tournament... (~30s for 5000 sims)"):
             df = run_simulation(model, n_sims=n_sims, elo_ratings=elo_ratings, injuries=injuries)
         st.session_state["sim_results"] = df
+    if col_clear.button("Clear results"):
+        st.session_state.pop("sim_results", None)
+        st.rerun()
 
     if "sim_results" in st.session_state:
         df = st.session_state["sim_results"]
