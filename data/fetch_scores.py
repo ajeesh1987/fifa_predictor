@@ -124,15 +124,24 @@ def fetch_and_update_actuals(force=False) -> tuple[int, list[str]]:
         for m in matches:
             home = _normalize(m["home_team"])
             away = _normalize(m["away_team"])
-            ok = save_actual(str(match_date), home, away, m["home_score"], m["away_score"])
-            if ok:
-                updated += 1
-                messages.append(f"{home} {m['home_score']}–{m['away_score']} {away}")
-            else:
-                ok2 = save_actual(str(match_date), away, home, m["away_score"], m["home_score"])
-                if ok2:
+            # Try ESPN date, then ±1 day (handles late-night UTC/CEST offset mismatches)
+            candidate_dates = [
+                match_date,
+                match_date - timedelta(days=1),
+                match_date + timedelta(days=1),
+            ]
+            saved = False
+            for d in candidate_dates:
+                if save_actual(str(d), home, away, m["home_score"], m["away_score"]):
+                    updated += 1
+                    messages.append(f"{home} {m['home_score']}–{m['away_score']} {away}")
+                    saved = True
+                    break
+                if save_actual(str(d), away, home, m["away_score"], m["home_score"]):
                     updated += 1
                     messages.append(f"{away} {m['away_score']}–{m['home_score']} {home} (flipped)")
+                    saved = True
+                    break
 
     if updated:
         retrain_msg = retrain_with_wc_results()
