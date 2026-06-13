@@ -62,6 +62,7 @@ TEAM_NAME_MAP = {
     "Czechia": "Czech Republic",
     "Czech Rep.": "Czech Republic",
     "Bosnia & Herzegovina": "Bosnia and Herzegovina",
+    "Bosnia-Herzegovina": "Bosnia and Herzegovina",
     "Ivory Coast": "Ivory Coast",
     "Côte d'Ivoire": "Ivory Coast",
     "DR Congo": "DR Congo",
