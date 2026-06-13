@@ -262,6 +262,7 @@ elif page == "Results & Accuracy":
             "pred_home_win_pct", "pred_draw_pct", "pred_away_win_pct",
             "outcome_correct", "exact_score",
         ]].copy()
+        detail["date"] = pd.to_datetime(detail["date"]).dt.strftime("%Y-%m-%d")
         detail["predicted"] = detail["pred_most_likely_home"].astype(int).astype(str) + "–" + detail["pred_most_likely_away"].astype(int).astype(str)
         detail["actual"] = detail["actual_home"].astype(int).astype(str) + "–" + detail["actual_away"].astype(int).astype(str)
         detail["outcome"] = detail["outcome_correct"].map({True: "✓", False: "✗"})
