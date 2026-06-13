@@ -107,7 +107,7 @@ def fetch_and_update_actuals(force=False) -> tuple[int, list[str]]:
         f.write(str(time.time()))
 
     all_matches_by_date = {}
-    for days_ago in range(1, 4):
+    for days_ago in range(0, 4):
         day = now - timedelta(days=days_ago)
         day_matches = _fetch_espn_date(day)
         if day_matches:
