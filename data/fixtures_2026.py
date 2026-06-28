@@ -117,23 +117,23 @@ GROUP_FIXTURES = [
 
 # Knockout fixtures — teams filled in as results come in
 KNOCKOUT_FIXTURES = [
-    # Round of 32 (June 28 – July 2)
-    {"date": date(2026, 6, 28), "home": "1A", "away": "3D/E/F", "round": "R32"},
-    {"date": date(2026, 6, 28), "home": "1C", "away": "3A/B/F", "round": "R32"},
-    {"date": date(2026, 6, 29), "home": "1B", "away": "3A/C/D", "round": "R32"},
-    {"date": date(2026, 6, 29), "home": "2A", "away": "2C",     "round": "R32"},
-    {"date": date(2026, 6, 30), "home": "1F", "away": "3G/H/I", "round": "R32"},
-    {"date": date(2026, 6, 30), "home": "1E", "away": "3B/C/D", "round": "R32"},
-    {"date": date(2026, 7, 1),  "home": "1D", "away": "2F",     "round": "R32"},
-    {"date": date(2026, 7, 1),  "home": "2B", "away": "2E",     "round": "R32"},
-    {"date": date(2026, 7, 1),  "home": "1H", "away": "3J/K/L", "round": "R32"},
-    {"date": date(2026, 7, 1),  "home": "1G", "away": "3A/B/C", "round": "R32"},
-    {"date": date(2026, 7, 2),  "home": "1I", "away": "2K",     "round": "R32"},
-    {"date": date(2026, 7, 2),  "home": "1J", "away": "2L",     "round": "R32"},
-    {"date": date(2026, 7, 2),  "home": "1K", "away": "2I",     "round": "R32"},
-    {"date": date(2026, 7, 2),  "home": "1L", "away": "2J",     "round": "R32"},
-    {"date": date(2026, 7, 3),  "home": "2G", "away": "2H",     "round": "R32"},
-    {"date": date(2026, 7, 3),  "home": "2D", "away": "3G/H/I/J/K/L", "round": "R32"},
+    # Round of 32 (June 28 – July 3)
+    {"date": date(2026, 6, 28), "home": "South Africa",          "away": "Canada",               "round": "R32"},
+    {"date": date(2026, 6, 29), "home": "Brazil",                "away": "Japan",                "round": "R32"},
+    {"date": date(2026, 6, 29), "home": "Germany",               "away": "Paraguay",             "round": "R32"},
+    {"date": date(2026, 6, 29), "home": "Netherlands",           "away": "Morocco",              "round": "R32"},
+    {"date": date(2026, 6, 30), "home": "Ivory Coast",           "away": "Norway",               "round": "R32"},
+    {"date": date(2026, 6, 30), "home": "France",                "away": "Sweden",               "round": "R32"},
+    {"date": date(2026, 6, 30), "home": "Mexico",                "away": "Ecuador",              "round": "R32"},
+    {"date": date(2026, 7, 1),  "home": "England",               "away": "DR Congo",             "round": "R32"},
+    {"date": date(2026, 7, 1),  "home": "Belgium",               "away": "Senegal",              "round": "R32"},
+    {"date": date(2026, 7, 1),  "home": "USA",                   "away": "Bosnia and Herzegovina","round": "R32"},
+    {"date": date(2026, 7, 2),  "home": "Spain",                 "away": "Austria",              "round": "R32"},
+    {"date": date(2026, 7, 2),  "home": "Portugal",              "away": "Croatia",              "round": "R32"},
+    {"date": date(2026, 7, 2),  "home": "Switzerland",           "away": "Algeria",              "round": "R32"},
+    {"date": date(2026, 7, 3),  "home": "Australia",             "away": "Egypt",                "round": "R32"},
+    {"date": date(2026, 7, 3),  "home": "Argentina",             "away": "Cape Verde",           "round": "R32"},
+    {"date": date(2026, 7, 3),  "home": "Colombia",              "away": "Ghana",                "round": "R32"},
 
     # Round of 16 (July 5–8)
     {"date": date(2026, 7, 5),  "home": "W49", "away": "W50", "round": "R16"},
