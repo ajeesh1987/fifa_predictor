@@ -16,7 +16,7 @@ CEST = pytz.timezone("Europe/Paris")
 def _today_cest():
     return datetime.now(CEST).date()
 
-from data.fixtures_2026 import GROUP_FIXTURES, GROUPS
+from data.fixtures_2026 import GROUP_FIXTURES, GROUPS, ALL_FIXTURES
 from data.fetch_data import FIFA_RANKINGS
 from model.dixon_coles import load_model, predict_match, MODEL_PATH
 from model.tournament_sim import run_simulation
@@ -70,37 +70,47 @@ if page == "Today's Matches":
     _default = max(_min, min(_today_cest(), _max))
     selected_date = st.date_input("Select date", value=_default, min_value=_min, max_value=_max)
 
-    day_fixtures = [f for f in GROUP_FIXTURES if f["date"] == selected_date]
+    from data.fetch_data import FIFA_RANKINGS as _FR
+    day_fixtures = [f for f in ALL_FIXTURES if f["date"] == selected_date]
 
     if not day_fixtures:
-        st.info(f"No group-stage fixtures on {selected_date}.")
+        st.info(f"No fixtures on {selected_date}.")
     else:
         for fx in day_fixtures:
-            pred = predict_match(model, fx["home"], fx["away"], neutral=False,
-                                  elo_ratings=elo_ratings, injuries=injuries)
-            save_prediction(fx, pred)
+            is_group = "group" in fx
+            stage_label = f"Group {fx['group']}" if is_group else fx.get("round", "Knockout")
+            home, away = fx["home"], fx["away"]
+            is_tbd = home not in _FR or away not in _FR
+
             with st.container():
-                st.markdown(f"### Group {fx['group']}: {fx['home']} vs {fx['away']}")
-                c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 2])
-                c1.metric(fx["home"], f"xG {pred['home_xg']}")
-                c2.metric("Home Win", f"{pred['home_win_prob']*100:.1f}%")
-                c3.metric("Draw", f"{pred['draw_prob']*100:.1f}%")
-                c4.metric("Away Win", f"{pred['away_win_prob']*100:.1f}%")
-                c5.metric(fx["away"], f"xG {pred['away_xg']}")
+                st.markdown(f"### {stage_label}: {home} vs {away}")
+                if is_tbd:
+                    st.info("Teams not yet determined — check back after qualifying rounds complete.")
+                else:
+                    neutral = not is_group
+                    pred = predict_match(model, home, away, neutral=neutral,
+                                        elo_ratings=elo_ratings, injuries=injuries)
+                    if is_group:
+                        save_prediction(fx, pred)
+                    c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 2])
+                    c1.metric(home, f"xG {pred['home_xg']}")
+                    c2.metric("Home Win", f"{pred['home_win_prob']*100:.1f}%")
+                    c3.metric("Draw", f"{pred['draw_prob']*100:.1f}%")
+                    c4.metric("Away Win", f"{pred['away_win_prob']*100:.1f}%")
+                    c5.metric(away, f"xG {pred['away_xg']}")
 
-                ms = pred["most_likely_score"]
-                st.markdown(f"**Most likely score:** {fx['home']} **{ms[0]} – {ms[1]}** {fx['away']}")
+                    ms = pred["most_likely_score"]
+                    st.markdown(f"**Most likely score:** {home} **{ms[0]} – {ms[1]}** {away}")
 
-                # Top 5 scores bar chart
-                labels = [f"{h}-{a}" for _, h, a in pred["top_scores"]]
-                values = [p for p, _, _ in pred["top_scores"]]
-                fig = go.Figure(go.Bar(x=labels, y=values, marker_color="#1f77b4"))
-                fig.update_layout(
-                    height=200, margin=dict(t=10, b=10, l=10, r=10),
-                    yaxis_title="Probability (%)", xaxis_title="Score",
-                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                    labels = [f"{h}-{a}" for _, h, a in pred["top_scores"]]
+                    values = [p for p, _, _ in pred["top_scores"]]
+                    fig = go.Figure(go.Bar(x=labels, y=values, marker_color="#1f77b4"))
+                    fig.update_layout(
+                        height=200, margin=dict(t=10, b=10, l=10, r=10),
+                        yaxis_title="Probability (%)", xaxis_title="Score",
+                        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
                 st.divider()
 
 

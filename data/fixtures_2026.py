@@ -114,3 +114,52 @@ GROUP_FIXTURES = [
     {"date": date(2026, 6, 27), "home": "Panama",  "away": "England", "group": "L"},
     {"date": date(2026, 6, 27), "home": "Croatia", "away": "Ghana",   "group": "L"},
 ]
+
+# Knockout fixtures — teams filled in as results come in
+KNOCKOUT_FIXTURES = [
+    # Round of 32 (June 28 – July 2)
+    {"date": date(2026, 6, 28), "home": "1A", "away": "3D/E/F", "round": "R32"},
+    {"date": date(2026, 6, 28), "home": "1C", "away": "3A/B/F", "round": "R32"},
+    {"date": date(2026, 6, 29), "home": "1B", "away": "3A/C/D", "round": "R32"},
+    {"date": date(2026, 6, 29), "home": "2A", "away": "2C",     "round": "R32"},
+    {"date": date(2026, 6, 30), "home": "1F", "away": "3G/H/I", "round": "R32"},
+    {"date": date(2026, 6, 30), "home": "1E", "away": "3B/C/D", "round": "R32"},
+    {"date": date(2026, 7, 1),  "home": "1D", "away": "2F",     "round": "R32"},
+    {"date": date(2026, 7, 1),  "home": "2B", "away": "2E",     "round": "R32"},
+    {"date": date(2026, 7, 1),  "home": "1H", "away": "3J/K/L", "round": "R32"},
+    {"date": date(2026, 7, 1),  "home": "1G", "away": "3A/B/C", "round": "R32"},
+    {"date": date(2026, 7, 2),  "home": "1I", "away": "2K",     "round": "R32"},
+    {"date": date(2026, 7, 2),  "home": "1J", "away": "2L",     "round": "R32"},
+    {"date": date(2026, 7, 2),  "home": "1K", "away": "2I",     "round": "R32"},
+    {"date": date(2026, 7, 2),  "home": "1L", "away": "2J",     "round": "R32"},
+    {"date": date(2026, 7, 3),  "home": "2G", "away": "2H",     "round": "R32"},
+    {"date": date(2026, 7, 3),  "home": "2D", "away": "3G/H/I/J/K/L", "round": "R32"},
+
+    # Round of 16 (July 5–8)
+    {"date": date(2026, 7, 5),  "home": "W49", "away": "W50", "round": "R16"},
+    {"date": date(2026, 7, 5),  "home": "W51", "away": "W52", "round": "R16"},
+    {"date": date(2026, 7, 6),  "home": "W53", "away": "W54", "round": "R16"},
+    {"date": date(2026, 7, 6),  "home": "W55", "away": "W56", "round": "R16"},
+    {"date": date(2026, 7, 7),  "home": "W57", "away": "W58", "round": "R16"},
+    {"date": date(2026, 7, 7),  "home": "W59", "away": "W60", "round": "R16"},
+    {"date": date(2026, 7, 8),  "home": "W61", "away": "W62", "round": "R16"},
+    {"date": date(2026, 7, 8),  "home": "W63", "away": "W64", "round": "R16"},
+
+    # Quarter-finals (July 11–12)
+    {"date": date(2026, 7, 11), "home": "W65", "away": "W66", "round": "QF"},
+    {"date": date(2026, 7, 11), "home": "W67", "away": "W68", "round": "QF"},
+    {"date": date(2026, 7, 12), "home": "W69", "away": "W70", "round": "QF"},
+    {"date": date(2026, 7, 12), "home": "W71", "away": "W72", "round": "QF"},
+
+    # Semi-finals (July 15–16)
+    {"date": date(2026, 7, 15), "home": "W73", "away": "W74", "round": "SF"},
+    {"date": date(2026, 7, 16), "home": "W75", "away": "W76", "round": "SF"},
+
+    # Third place (July 18)
+    {"date": date(2026, 7, 18), "home": "L75", "away": "L76", "round": "3rd"},
+
+    # Final (July 19)
+    {"date": date(2026, 7, 19), "home": "W77", "away": "W78", "round": "Final"},
+]
+
+ALL_FIXTURES = GROUP_FIXTURES + KNOCKOUT_FIXTURES

@@ -22,29 +22,29 @@ MODEL_PATH = os.path.join(os.path.dirname(__file__), "trained_model.pkl")
 XI = 0.003          # decay rate: ~18-month effective window
 MIN_WEIGHT = 0.05
 
-# WC knockout-stage matches average ~1.2 goals/team; Poisson trained on all history
-# slightly over-predicts. This factor scales lam/mu down without changing outcome probs.
-GOAL_SCALE = 0.88
+# WC 2026 group stage is averaging 3.0 goals/game — no downward scaling needed.
+GOAL_SCALE = 1.0
 
-# Multiplicative prior over scorelines — nudges the matrix toward common WC results.
-# Values < 1.0 suppress implausible scores; values > 1.0 boost plausible ones.
-# Derived from WC 2018 + 2022 scoreline frequencies (64 matches each).
+# Multiplicative prior calibrated to WC 2026 group-stage scoreline frequencies.
+# High-scoring lines boosted; 0-0 and very-low-scoring lines suppressed.
 _SCORE_PRIOR = {
-    (0, 0): 1.25,
-    (1, 0): 1.30,
-    (0, 1): 1.30,
-    (1, 1): 1.20,
-    (2, 0): 1.15,
-    (0, 2): 1.15,
-    (2, 1): 1.10,
-    (1, 2): 1.10,
-    (3, 0): 0.95,
-    (0, 3): 0.95,
-    (2, 2): 0.90,
-    (3, 1): 0.85,
-    (1, 3): 0.85,
-    (3, 2): 0.70,
-    (2, 3): 0.70,
+    (0, 0): 0.80,
+    (1, 0): 1.10,
+    (0, 1): 1.10,
+    (1, 1): 1.30,
+    (2, 0): 1.10,
+    (0, 2): 1.10,
+    (2, 1): 1.20,
+    (1, 2): 1.20,
+    (3, 0): 1.10,
+    (0, 3): 1.10,
+    (2, 2): 1.10,
+    (3, 1): 1.10,
+    (1, 3): 1.10,
+    (4, 1): 1.05,
+    (1, 4): 1.05,
+    (4, 2): 1.00,
+    (2, 4): 1.00,
 }
 
 COMPETITION_WEIGHTS = {
