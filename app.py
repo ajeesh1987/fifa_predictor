@@ -252,6 +252,24 @@ elif page == "Results & Accuracy":
     st.divider()
 
     log = load_with_actuals()
+
+    # Backfill predictions for rows that have actuals but no stored prediction
+    missing_pred = log[log["actual_home"].notna() & log["pred_most_likely_home"].isna()]
+    if not missing_pred.empty:
+        from data.fixtures_2026 import ALL_FIXTURES
+        fixture_map = {(str(f["date"]), f["home"], f["away"]): f for f in ALL_FIXTURES}
+        for _, row in missing_pred.iterrows():
+            home, away = row["home_team"], row["away_team"]
+            if home not in FIFA_RANKINGS or away not in FIFA_RANKINGS:
+                continue
+            fx_key = (str(row["date"])[:10], home, away)
+            fx = fixture_map.get(fx_key, {"date": row["date"], "home": home, "away": away})
+            is_group = "group" in fx
+            pred = predict_match(model, home, away, neutral=not is_group,
+                                 elo_ratings=elo_ratings, injuries=injuries)
+            save_prediction(fx, pred)
+        log = load_with_actuals()
+
     summary = accuracy_summary(log)
 
     if not summary:
