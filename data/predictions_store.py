@@ -40,7 +40,7 @@ def save_prediction(fixture: dict, pred: dict):
         "date": fixture["date"],
         "home_team": fixture["home"],
         "away_team": fixture["away"],
-        "group": fixture.get("group", ""),
+        "group": fixture.get("group", fixture.get("round", "")),
         "pred_home_xg": pred["home_xg"],
         "pred_away_xg": pred["away_xg"],
         "pred_home_win_pct": round(pred["home_win_prob"] * 100, 1),
@@ -75,10 +75,29 @@ def save_actual(match_date: str, home: str, away: str, actual_home: int, actual_
         (df["home_team"] == home) &
         (df["away_team"] == away)
     )
-    if not mask.any():
-        return False
-    df.loc[mask, "actual_home"] = actual_home
-    df.loc[mask, "actual_away"] = actual_away
+    if mask.any():
+        df.loc[mask, "actual_home"] = actual_home
+        df.loc[mask, "actual_away"] = actual_away
+    else:
+        # Knockout result fetched before prediction was logged — insert a bare row
+        new_row = pd.DataFrame([{
+            "date": match_date,
+            "home_team": home,
+            "away_team": away,
+            "group": "",
+            "pred_home_xg": None,
+            "pred_away_xg": None,
+            "pred_home_win_pct": None,
+            "pred_draw_pct": None,
+            "pred_away_win_pct": None,
+            "pred_most_likely_home": None,
+            "pred_most_likely_away": None,
+            "actual_home": actual_home,
+            "actual_away": actual_away,
+        }])
+        df = pd.concat([df, new_row], ignore_index=True)
+    df["date"] = pd.to_datetime(df["date"]).dt.date
+    df.sort_values(["date", "home_team"], key=lambda col: col.astype(str), inplace=True)
     df.to_csv(STORE_PATH, index=False)
     return True
 
@@ -89,7 +108,7 @@ def load_with_actuals() -> pd.DataFrame:
 
 def accuracy_summary(df: pd.DataFrame) -> dict:
     """Compute accuracy metrics over rows that have actuals."""
-    scored = df.dropna(subset=["actual_home", "actual_away"]).copy()
+    scored = df.dropna(subset=["actual_home", "actual_away", "pred_most_likely_home", "pred_most_likely_away"]).copy()
     if scored.empty:
         return {}
 

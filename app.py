@@ -90,8 +90,7 @@ if page == "Today's Matches":
                     neutral = not is_group
                     pred = predict_match(model, home, away, neutral=neutral,
                                         elo_ratings=elo_ratings, injuries=injuries)
-                    if is_group:
-                        save_prediction(fx, pred)
+                    save_prediction(fx, pred)
                     c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 2])
                     c1.metric(home, f"xG {pred['home_xg']}")
                     c2.metric("Home Win", f"{pred['home_win_prob']*100:.1f}%")

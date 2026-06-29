@@ -181,7 +181,7 @@ def retrain_with_wc_results() -> str:
     import pandas as pd
 
     log = load_with_actuals()
-    scored = log.dropna(subset=["actual_home", "actual_away"]).copy()
+    scored = log.dropna(subset=["actual_home", "actual_away", "pred_home_win_pct", "pred_draw_pct", "pred_away_win_pct"]).copy()
 
     if scored.empty:
         return "No WC results to retrain on yet."
