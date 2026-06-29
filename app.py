@@ -264,24 +264,42 @@ elif page == "Results & Accuracy":
         m3.metric("Exact score correct", f"{summary['exact_score_accuracy']}%")
 
         st.subheader("Match-by-match breakdown")
-        detail = summary["detail"][[
-            "date", "home_team", "away_team",
-            "pred_most_likely_home", "pred_most_likely_away",
-            "actual_home", "actual_away",
-            "pred_home_win_pct", "pred_draw_pct", "pred_away_win_pct",
-            "outcome_correct", "exact_score",
-        ]].copy()
-        detail["date"] = pd.to_datetime(detail["date"]).dt.strftime("%Y-%m-%d")
-        detail["predicted"] = detail["pred_most_likely_home"].astype(int).astype(str) + "–" + detail["pred_most_likely_away"].astype(int).astype(str)
-        detail["actual"] = detail["actual_home"].astype(int).astype(str) + "–" + detail["actual_away"].astype(int).astype(str)
-        detail["outcome"] = detail["outcome_correct"].map({True: "✓", False: "✗"})
-        detail["exact"] = detail["exact_score"].map({True: "✓", False: "✗"})
+        # All rows with actuals (incl. knockout results with no prediction yet)
+        all_with_actuals = log.dropna(subset=["actual_home", "actual_away"]).copy()
+        all_with_actuals["date"] = pd.to_datetime(all_with_actuals["date"])
+        all_with_actuals.sort_values("date", ascending=False, inplace=True)
+        all_with_actuals["date"] = all_with_actuals["date"].dt.strftime("%Y-%m-%d")
+        all_with_actuals["actual_home"] = all_with_actuals["actual_home"].astype(int)
+        all_with_actuals["actual_away"] = all_with_actuals["actual_away"].astype(int)
 
-        display = detail.rename(columns={
+        has_pred = all_with_actuals["pred_most_likely_home"].notna()
+
+        def _outcome(h, a):
+            return "H" if h > a else ("D" if h == a else "A")
+
+        # Outcome/exact only where prediction exists
+        all_with_actuals["predicted"] = np.where(
+            has_pred,
+            all_with_actuals["pred_most_likely_home"].fillna(0).astype(int).astype(str) + "–" +
+            all_with_actuals["pred_most_likely_away"].fillna(0).astype(int).astype(str),
+            "—"
+        )
+        all_with_actuals["actual"] = (
+            all_with_actuals["actual_home"].astype(str) + "–" + all_with_actuals["actual_away"].astype(str)
+        )
+        all_with_actuals["Outcome"] = all_with_actuals.apply(
+            lambda r: ("✓" if _outcome(r["pred_most_likely_home"], r["pred_most_likely_away"]) == _outcome(r["actual_home"], r["actual_away"]) else "✗")
+            if pd.notna(r["pred_most_likely_home"]) else "—", axis=1
+        )
+        all_with_actuals["Exact"] = all_with_actuals.apply(
+            lambda r: ("✓" if int(r["pred_most_likely_home"]) == r["actual_home"] and int(r["pred_most_likely_away"]) == r["actual_away"] else "✗")
+            if pd.notna(r["pred_most_likely_home"]) else "—", axis=1
+        )
+
+        display = all_with_actuals.rename(columns={
             "date": "Date", "home_team": "Home", "away_team": "Away",
             "predicted": "Predicted", "actual": "Actual",
             "pred_home_win_pct": "H%", "pred_draw_pct": "D%", "pred_away_win_pct": "A%",
-            "outcome": "Outcome", "exact": "Exact",
         })[["Date", "Home", "Away", "Predicted", "Actual", "H%", "D%", "A%", "Outcome", "Exact"]]
 
         st.dataframe(display, use_container_width=True, hide_index=True)
