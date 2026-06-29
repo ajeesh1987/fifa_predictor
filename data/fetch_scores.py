@@ -45,11 +45,21 @@ def _fetch_espn_date(date_cest: datetime) -> list[dict]:
         away = next((c for c in competitors if c.get("homeAway") == "away"), None)
         if not home or not away:
             continue
+        home_score = int(home.get("score", 0))
+        away_score = int(away.get("score", 0))
+        # Detect penalty shootout: scores tied but ESPN marks one team as winner
+        penalty_winner = None
+        if home_score == away_score:
+            if home.get("winner"):
+                penalty_winner = "home"
+            elif away.get("winner"):
+                penalty_winner = "away"
         matches.append({
             "home_team": home["team"]["displayName"],
             "away_team": away["team"]["displayName"],
-            "home_score": int(home.get("score", 0)),
-            "away_score": int(away.get("score", 0)),
+            "home_score": home_score,
+            "away_score": away_score,
+            "penalty_winner": penalty_winner,
         })
     return matches
 
@@ -131,16 +141,20 @@ def fetch_and_update_actuals(force=False) -> tuple[int, list[str]]:
                 match_date - timedelta(days=1),
                 match_date + timedelta(days=1),
             ]
+            pw = m.get("penalty_winner")
+            pens_label = " (pens)" if pw else ""
             saved = False
             for d in candidate_dates:
-                if save_actual(str(d), home, away, m["home_score"], m["away_score"]):
+                if save_actual(str(d), home, away, m["home_score"], m["away_score"], pw):
                     updated += 1
-                    messages.append(f"{home} {m['home_score']}–{m['away_score']} {away}")
+                    messages.append(f"{home} {m['home_score']}–{m['away_score']} {away}{pens_label}")
                     saved = True
                     break
-                if save_actual(str(d), away, home, m["away_score"], m["home_score"]):
+                # Try flipped (ESPN home/away may not match our fixture order)
+                flipped_pw = ("away" if pw == "home" else "home") if pw else None
+                if save_actual(str(d), away, home, m["away_score"], m["home_score"], flipped_pw):
                     updated += 1
-                    messages.append(f"{away} {m['away_score']}–{m['home_score']} {home} (flipped)")
+                    messages.append(f"{away} {m['away_score']}–{m['home_score']} {home} (flipped){pens_label}")
                     saved = True
                     break
 

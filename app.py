@@ -290,28 +290,41 @@ elif page == "Results & Accuracy":
         all_with_actuals["actual_home"] = all_with_actuals["actual_home"].astype(int)
         all_with_actuals["actual_away"] = all_with_actuals["actual_away"].astype(int)
 
+        if "penalty_winner" not in all_with_actuals.columns:
+            all_with_actuals["penalty_winner"] = None
         has_pred = all_with_actuals["pred_most_likely_home"].notna()
 
         def _outcome(h, a):
             return "H" if h > a else ("D" if h == a else "A")
 
-        # Outcome/exact only where prediction exists
+        def _actual_outcome(r):
+            pw = r.get("penalty_winner")
+            if pw == "home":
+                return "H"
+            if pw == "away":
+                return "A"
+            return _outcome(r["actual_home"], r["actual_away"])
+
         all_with_actuals["predicted"] = np.where(
             has_pred,
             all_with_actuals["pred_most_likely_home"].fillna(0).astype(int).astype(str) + "–" +
             all_with_actuals["pred_most_likely_away"].fillna(0).astype(int).astype(str),
             "—"
         )
+        # Show "(pens)" suffix for penalty matches
+        pens_suffix = all_with_actuals["penalty_winner"].notna().map({True: " (pens)", False: ""}).fillna("")
         all_with_actuals["actual"] = (
-            all_with_actuals["actual_home"].astype(str) + "–" + all_with_actuals["actual_away"].astype(str)
+            all_with_actuals["actual_home"].astype(str) + "–" + all_with_actuals["actual_away"].astype(str) + pens_suffix
         )
         all_with_actuals["Outcome"] = all_with_actuals.apply(
-            lambda r: ("✓" if _outcome(r["pred_most_likely_home"], r["pred_most_likely_away"]) == _outcome(r["actual_home"], r["actual_away"]) else "✗")
+            lambda r: ("✓" if _outcome(r["pred_most_likely_home"], r["pred_most_likely_away"]) == _actual_outcome(r) else "✗")
             if pd.notna(r["pred_most_likely_home"]) else "—", axis=1
         )
         all_with_actuals["Exact"] = all_with_actuals.apply(
-            lambda r: ("✓" if int(r["pred_most_likely_home"]) == r["actual_home"] and int(r["pred_most_likely_away"]) == r["actual_away"] else "✗")
-            if pd.notna(r["pred_most_likely_home"]) else "—", axis=1
+            lambda r: "—" if r.get("penalty_winner") else
+            (("✓" if int(r["pred_most_likely_home"]) == r["actual_home"] and int(r["pred_most_likely_away"]) == r["actual_away"] else "✗")
+             if pd.notna(r["pred_most_likely_home"]) else "—"),
+            axis=1
         )
 
         display = all_with_actuals.rename(columns={

@@ -17,7 +17,7 @@ COLUMNS = [
     "pred_home_xg", "pred_away_xg",
     "pred_home_win_pct", "pred_draw_pct", "pred_away_win_pct",
     "pred_most_likely_home", "pred_most_likely_away",
-    "actual_home", "actual_away",
+    "actual_home", "actual_away", "penalty_winner",
 ]
 
 
@@ -68,8 +68,11 @@ def save_prediction(fixture: dict, pred: dict):
     df.to_csv(STORE_PATH, index=False)
 
 
-def save_actual(match_date: str, home: str, away: str, actual_home: int, actual_away: int):
+def save_actual(match_date: str, home: str, away: str, actual_home: int, actual_away: int,
+                penalty_winner: str = None):
     df = _load()
+    if "penalty_winner" not in df.columns:
+        df["penalty_winner"] = None
     mask = (
         (df["date"].astype(str).str[:10] == str(match_date)) &
         (df["home_team"] == home) &
@@ -78,6 +81,7 @@ def save_actual(match_date: str, home: str, away: str, actual_home: int, actual_
     if mask.any():
         df.loc[mask, "actual_home"] = actual_home
         df.loc[mask, "actual_away"] = actual_away
+        df.loc[mask, "penalty_winner"] = penalty_winner
     else:
         # Knockout result fetched before prediction was logged — insert a bare row
         new_row = pd.DataFrame([{
@@ -94,6 +98,7 @@ def save_actual(match_date: str, home: str, away: str, actual_home: int, actual_
             "pred_most_likely_away": None,
             "actual_home": actual_home,
             "actual_away": actual_away,
+            "penalty_winner": penalty_winner,
         }])
         df = pd.concat([df, new_row], ignore_index=True)
     df["date"] = pd.to_datetime(df["date"]).dt.date
@@ -118,16 +123,27 @@ def accuracy_summary(df: pd.DataFrame) -> dict:
     def outcome(h, a):
         return "H" if h > a else ("D" if h == a else "A")
 
+    if "penalty_winner" not in scored.columns:
+        scored["penalty_winner"] = None
+
     scored["pred_outcome"] = scored.apply(
         lambda r: outcome(r["pred_most_likely_home"], r["pred_most_likely_away"]), axis=1
     )
-    scored["actual_outcome"] = scored.apply(
-        lambda r: outcome(r["actual_home"], r["actual_away"]), axis=1
-    )
+    # For penalty matches use the actual winner, not the 90-min score (which is always a draw)
+    def actual_outcome(r):
+        pw = r.get("penalty_winner")
+        if pw == "home":
+            return "H"
+        if pw == "away":
+            return "A"
+        return outcome(r["actual_home"], r["actual_away"])
+    scored["actual_outcome"] = scored.apply(actual_outcome, axis=1)
     scored["outcome_correct"] = scored["pred_outcome"] == scored["actual_outcome"]
-    scored["exact_score"] = (
-        (scored["pred_most_likely_home"] == scored["actual_home"]) &
-        (scored["pred_most_likely_away"] == scored["actual_away"])
+    # Exact score not meaningful for penalty matches
+    scored["exact_score"] = scored.apply(
+        lambda r: False if r.get("penalty_winner") else
+        (r["pred_most_likely_home"] == r["actual_home"] and r["pred_most_likely_away"] == r["actual_away"]),
+        axis=1
     )
     # Favourite correct: highest prob outcome matched actual
     def fav_outcome(r):
